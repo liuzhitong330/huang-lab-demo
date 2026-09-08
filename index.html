@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="An interactive, data-grounded protein candidate triage study prepared for the Possu Huang Lab by Cathy Liu.">
+  <title>From enriched hits to a defensible protein shortlist</title>
+  <link rel="stylesheet" href="styles.css?v=2">
+</head>
+<body>
+  <main class="page">
+    <h1>From enriched hits to a defensible protein shortlist</h1>
+    <div class="byline">
+      Cathy Liu · Protein design &amp; assay development · <a href="mailto:cathyliu014@gmail.com">cathyliu014@gmail.com</a><br>
+      Prepared for the Possu Huang Lab, Stanford Bioengineering<br>
+      Personal exploratory project, September 2026
+    </div>
+
+    <nav class="section-nav" aria-label="Demo sections">
+      <a href="#motivation">Decision</a>
+      <a href="#a1">Candidate triage</a>
+      <a href="#a2">SEC check</a>
+      <a href="#a3">Ensemble check</a>
+      <a href="#relevance">Next experiment</a>
+    </nav>
+
+    <p class="opening">Display enrichment is useful for finding possible binders, but it does not answer the question that matters before committing expression and purification capacity: <em>which candidates still look strong when binding, dissociation, reproducibility, and sample-quality evidence are considered together?</em></p>
+    <p>I built a small decision layer over the Huang Lab's ADAPT-M study. It exposes the filters instead of hiding them, links the shortlist back to the reported measurements, and adds two practical checks: SEC trace inspection and backbone-conformer sensitivity from the lab's Caliby repository.</p>
+
+    <hr id="motivation">
+    <section aria-labelledby="how-heading">
+      <h2 id="how-heading">How it works</h2>
+      <div class="experiment">
+        <div class="exp-label">Design–build–test handoff</div>
+        <div class="exp-title">Choose a small, defensible panel for orthogonal validation</div>
+        <p>The default panel asks for sub-500 nM median affinity, a dissociation AUC of at least 20 seconds, reported enrichment above 4.5, and at least eight affinity replicates. Those cutoffs are editable below; they are a triage policy, not biological truth.</p>
+      </div>
+      <p>The published study reports 14 true binders from 51 sequences measured with ADAPT-M. This demo harmonizes 13 canonical design IDs across the affinity, dissociation, enrichment, computational-metric, and sequence tables. The separate <code>s19901_ch</code> construct is not merged into its parent design.</p>
+    </section>
+
+    <hr id="a1">
+    <section aria-labelledby="analysis-one-heading">
+      <h2 id="analysis-one-heading">Analysis 1 — Candidate triage</h2>
+      <div class="experiment">
+        <div class="exp-label">Interactive evidence gate</div>
+        <div class="exp-title">Affinity × residence × enrichment × replicate support</div>
+        <p>Change the gate and ranking lens. Points in teal pass every active cutoff; click a table row to inspect the associated SEC trace.</p>
+      </div>
+
+      <div class="panel">
+        <div class="control-grid">
+          <label>Maximum median K<sub>d</sub><output id="kd-output">500 nM</output><input id="kd-filter" type="range" min="50" max="5000" step="50" value="500"></label>
+          <label>Minimum dissociation AUC<output id="auc-output">20 s</output><input id="auc-filter" type="range" min="14" max="31" step="1" value="20"></label>
+          <label>Minimum enrichment<output id="enrichment-output">4.5</output><input id="enrichment-filter" type="range" min="2" max="6.5" step="0.25" value="4.5"></label>
+          <label>Minimum K<sub>d</sub> replicates<output id="replicate-output">8</output><input id="replicate-filter" type="range" min="4" max="14" step="1" value="8"></label>
+        </div>
+        <label class="select-label" for="ranking-lens">Ranking lens</label>
+        <select id="ranking-lens">
+          <option value="balanced">Balanced experiment</option>
+          <option value="affinity">Affinity first</option>
+          <option value="kinetics">Slow dissociation first</option>
+          <option value="screen">Screen-to-assay agreement</option>
+        </select>
+        <svg id="candidate-plot" class="viz" viewBox="0 0 700 390" role="img" aria-label="Median affinity versus dissociation AUC for measured binders"></svg>
+        <div class="readout" id="candidate-readout" aria-live="polite"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Rank</th><th>Design</th><th>K<sub>d</sub></th><th>AUC</th><th>Enrich.</th><th>n</th><th>Score</th></tr></thead>
+            <tbody id="candidate-table"></tbody>
+          </table>
+        </div>
+        <figcaption>Median K<sub>d</sub> and AUC are computed from per-chamber measurements in Source Data sheets 2j and 4e. Enrichment comes from SI 15. Lower K<sub>d</sub> and higher AUC are favorable.</figcaption>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric"><span class="metric-val">27</span><span class="metric-desc">designs in the joined screen view</span></div>
+        <div class="metric"><span class="metric-val" id="screen-confirmed">10 / 18</span><span class="metric-desc">detected among designs above the enrichment gate</span></div>
+        <div class="metric"><span class="metric-val" id="shortlist-count">4</span><span class="metric-desc">candidates in the current shortlist</span></div>
+      </div>
+      <p id="screen-note">At the default enrichment gate, 18 designs look strong by screen enrichment, but only 10 are in the harmonized detected-binder set. This is the exact point at which quantitative in-vitro measurement changes the decision.</p>
+    </section>
+
+    <hr id="a2">
+    <section aria-labelledby="analysis-two-heading">
+      <h2 id="analysis-two-heading">Analysis 2 — SEC is a separate quality question</h2>
+      <div class="experiment">
+        <div class="exp-label">Protein-sample check</div>
+        <div class="exp-title">Inspect the trace before treating affinity as development readiness</div>
+        <p>The strongest binder is not automatically the cleanest sample. Select one of the five monobody–meGFP constructs used in the paper's validation experiments.</p>
+      </div>
+      <div class="panel">
+        <div class="chips" id="sec-options"><span>Trace:</span></div>
+        <svg id="sec-plot" class="viz" viewBox="0 0 700 330" role="img" aria-label="Normalized size exclusion chromatography trace"></svg>
+        <div class="readout" id="sec-readout" aria-live="polite"></div>
+        <figcaption>Source Data sheet SI 28. Each trace is normalized to its own maximum for shape comparison. “Pre-main-peak area” is a transparent descriptive proxy and is not assigned to aggregate without calibration or fraction identity.</figcaption>
+      </div>
+      <p>At these descriptive settings, <strong>s19382</strong> has the best median affinity and slowest dissociation, but its reported SEC trace also has the largest pre-main-peak area proxy among the five fusion proteins. <strong>s14335</strong> is weaker in affinity but has a cleaner-looking trace by that same proxy. That tension argues for carrying both forward, rather than letting one score decide the panel.</p>
+    </section>
+
+    <hr id="a3">
+    <section aria-labelledby="analysis-three-heading">
+      <h2 id="analysis-three-heading">Analysis 3 — Flag conformer-sensitive positions before lab work</h2>
+      <div class="experiment">
+        <div class="exp-label">Verified Huang Lab GitHub data</div>
+        <div class="exp-title">A residue-level check using Caliby's bundled DHFR conformers</div>
+        <p>I aligned the 159 shared Cα atoms in <code>1rx2.cif</code> and <code>1rx4.cif</code> from the Caliby notebook data, then calculated per-residue displacement after Kabsch alignment. Move the threshold to see which positions would deserve explicit ensemble-aware review.</p>
+      </div>
+      <div class="panel">
+        <label class="single-control">Displacement flag<output id="displacement-output">1.0 Å</output><input id="displacement-filter" type="range" min="0.5" max="4" step="0.25" value="1"></label>
+        <svg id="conformer-plot" class="viz" viewBox="0 0 700 330" role="img" aria-label="Residue-level displacement between two aligned DHFR conformers"></svg>
+        <div class="readout" id="conformer-readout" aria-live="polite"></div>
+        <figcaption>Derived from the two DHFR mmCIF files bundled in ProteinDesignLab/caliby at commit <code>41d3156</code>. This is a repository integration check, not a result about the ADAPT-M monobodies.</figcaption>
+      </div>
+      <div class="metric-row">
+        <div class="metric"><span class="metric-val">1.247 Å</span><span class="metric-desc">global aligned Cα RMSD</span></div>
+        <div class="metric"><span class="metric-val">0.354 Å</span><span class="metric-desc">median residue displacement</span></div>
+        <div class="metric"><span class="metric-val">A17</span><span class="metric-desc">largest shift, 9.637 Å</span></div>
+      </div>
+      <p>Caliby's own documentation recommends the full ensemble → Caliby workflow for sequences intended for the lab; the distilled model is positioned for fast backbone screening and is not recommended for multistate design. The practical implication is simple: preserve a per-conformer score or disagreement flag in the experimental handoff, especially around the mobile region centered on residues 16–22 in this example.</p>
+    </section>
+
+    <hr id="relevance">
+    <section aria-labelledby="relevance-heading">
+      <h2 id="relevance-heading">Why this matters for the lab</h2>
+      <h3>A proposed next validation panel</h3>
+      <p>Under the default gate, the first panel is <strong>s19382, s14335, s19901, and s37711</strong>. I would express and purify them in parallel, record yield and soluble recovery, inspect SEC using a predeclared integration rule, and then run an orthogonal affinity assay. The panel retains the two leads highlighted in the paper while adding two candidates with intermediate affinity and dissociation behavior, giving the next experiment more information than repeating only the top hit.</p>
+
+      <h2>What I would bring</h2>
+      <p>My relevant overlap is the handoff between computational design and interpretable experiments: I have used AlphaFold 3 and ProteinMPNN for structure-guided candidate work, and I have hands-on experience developing HPLC/SEC methods, running protein and cell assays, checking data quality, and maintaining reproducible records. This demo shows how I reason across those layers. It does <strong>not</strong> claim independent molecular cloning or recombinant protein-production experience.</p>
+
+      <h2>Methods note</h2>
+      <p class="methods-note">All experimental values come from the open-access <a href="https://www.nature.com/articles/s41467-026-75463-1">ADAPT-M paper and Source Data workbook</a>. The article reports that display enrichment can contain non-binders and that 14 true binders were measured; this demo recomputes medians and quartiles from the workbook and joins 13 canonical IDs across relevant tables. Computational metrics are shown only as supporting context, never as substitutes for measured binding. The conformer view uses files from the <a href="https://github.com/ProteinDesignLab/caliby">Huang Lab's Caliby repository</a> at the recorded commit. Cutoffs and weighted scores are exploratory decision aids, not validated predictors. No new wet-lab data were generated.</p>
+    </section>
+
+    <footer>
+      Cathy Liu · <a href="mailto:cathyliu014@gmail.com">cathyliu014@gmail.com</a> · <a href="tel:+14152163799">415-216-3799</a><br>
+      Epilepsy neurostimulation project, <a href="https://arxiv.org/abs/2606.04339">arXiv:2606.04339</a>
+    </footer>
+  </main>
+
+  <script src="data.js?v=2"></script>
+  <script src="app.js?v=2"></script>
+</body>
+</html>
